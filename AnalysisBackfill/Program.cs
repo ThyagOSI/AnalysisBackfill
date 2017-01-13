@@ -65,38 +65,10 @@ namespace AnalysisBackfill
                 aDatabase = aSystem.Databases[user_db];
                 aAnalysisService = aSystem.AnalysisService;
 
-                /*
-                 * need to rewrite this bit.  there has to be a better way to comparsion the version to "2.8.5" than parsing the string
-                //check versions
-                var PISystemVersion = aSystem.ServerVersion.Split('.');
-                var AFSDKVersion = aSystems.Version.Split('.');
-                                
-                //if less than version 2.8.5, then programmatic backfill/recalc is not supported.
-                if (Convert.ToInt32(PISystemVersion[0])<3 && Convert.ToInt32(PISystemVersion[1]) < 8 && Convert.ToInt32(PISystemVersion[2]) < 6)
-                {
-                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in PI AF Server {0}." +
-                        "Please upgrade PI AF Server '{1}' to version 2.8.5 or higher to use this utility.", aSystem.ServerVersion, user_serv);
-                    Environment.Exit(0);
-                }
-                if (!(AFSDKVersion.Contains("2.8.5") || AFSDKVersion.Contains("2.8.6")))
-                {
-                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in AF SDK Version {0}." +
-                    "Please upgrade PI System Explorer on this machine to version 2.8.6 or higher to use this utility.", AFSDKVersion, user_serv);
-                    Environment.Exit(0);
-                }
-                if (!aAnalysisService.CanQueueCalculation(out reason))
-                { 
-                    Console.WriteLine(reason);
-                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in AF SDK Version {0}." +
-                        "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher to use this utility.", AFSDKVersion, user_serv);
-                    Environment.Exit(0);
-                }
-                if (!aPIServer.ServerVersion.Contains(3.4.405))
-                {
-                    Console.WriteLine("Programmatic backfilling/recalculation not supported in AF SDK Version {0}." +
-                        "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher.", AFSDKVersion, user_serv);
-                    Environment.Exit(0);
-                }
+                /* check versions.  need to write this. 
+                aSystem.ServerVersion
+                aSystems.Version
+                aPIServer.ServerVersion
                 */
 
                 //AFElement
@@ -143,6 +115,13 @@ namespace AnalysisBackfill
                     , backfillPeriod.Span.Days, backfillPeriod.Span.Hours, backfillPeriod.Span.Minutes, backfillPeriod.Span.Seconds);
                 Console.WriteLine("\tMode: " + user_mode + "=" + mode.ToString());
 
+                /* to check for dependent analyses
+                foreach (var analysis_n in foundAnalyses)
+                {
+
+                }
+                */
+
                 //exit if no analyses
                 if (foundAnalyses.Count == 0)
                 {
@@ -156,14 +135,14 @@ namespace AnalysisBackfill
                 while (!Console.KeyAvailable && DateTime.Now.Subtract(beginWait).TotalSeconds < 10) Thread.Sleep(250);
 
                 //no status check
-                Console.WriteLine("\nThere will be no status check after the backfill/recalculate is queued (until AF 2.9.0). Please verify using other means.");
+                Console.WriteLine("\nThere will be no status check after the backfill/recalculate is queued (until AF 2.9.0). Please verify by using other means.");
 
                 //queue analyses for backfill/recalc
                 foreach (var analysis_n in foundAnalyses)
                 {
                     response = aAnalysisService.QueueCalculation(new List<AFAnalysis> { analysis_n }, backfillPeriod, mode);
 
-                    /*
+                    /* no status check info
                         * in AF 2.9, QueueCalculation will allow for true status checking. In AF 2.8.5, it is not possible to check.  
                         * Documentation (https://techsupport.osisoft.com/Documentation/PI-AF-SDK/html/M_OSIsoft_AF_Analysis_AFAnalysisService_ToString.htm) states:
                         *This method queues the list of analyses on the analysis service to be calculated. 
