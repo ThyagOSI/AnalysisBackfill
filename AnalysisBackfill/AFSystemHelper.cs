@@ -23,9 +23,7 @@ class AFSystemHelper
         {
             Console.WriteLine("{0}\nPISystem '{1}' was not found. List of PI Systems in KST:", e.Message, PISystemName);
             foreach (var it in allAFServers)
-            {
                 Console.WriteLine("\t" + it.Name);
-            }
             Environment.Exit(0);
             return;
         }
@@ -39,9 +37,8 @@ class AFSystemHelper
         {
             Console.WriteLine("{0}\nAF Database '{1}' was not found. List of AF Databases in {2}:", e.Message, AFDatabaseName, PISystemName);
             foreach (var it in aAFServer.Databases)
-            {
                 Console.WriteLine("\t" + it.Name);
-            }
+            Environment.Exit(0);
             return;
         }
     }
@@ -61,9 +58,8 @@ class AFSystemHelper
         {
             Console.WriteLine("{0}\nPIServer '{1}' was not found. List of PI Servers in KST:", e.Message, PIServerName);
             foreach (var it in allPIServers)
-            {
                 Console.WriteLine("\t" + it.Name);
-            }
+            Environment.Exit(0);
             return;
         }
     }
