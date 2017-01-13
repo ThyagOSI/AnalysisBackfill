@@ -15,44 +15,36 @@ namespace AnalysisBackfill
 {
     class AnalysisBackfill
     {
-    /*
-        //need to figure out how to do this
-        private class AppArguments
-        {
-
-        }
-    */
-
         static void Main(string[] args)
         {
             //define variables
-            PISystems aSystems = new PISystems();
-            PISystem aSystem = null;
-            AFDatabase aDatabase = null;
-            AFElement aElement = null;
-            AFAnalysisService aAnalysisService = null;
-            PIServer aPIServer = null;
-
-            List<AFAnalysis> foundAnalyses = null;
-
             String user_path = null;
             String user_serv = null;
             String user_db = null;
             String user_analysisfilter = null;
             String user_mode = null;
 
+            PIServer aPIServer = null;
+            PISystems aSystems = new PISystems();
+            PISystem aSystem = null;
+            AFDatabase aDatabase = null;
+            AFElement foundElements = null;
+            AFAnalysisService aAnalysisService = null;
+            List<AFAnalysis> foundAnalyses = null;
+
             AFTime backfillStartTime;
             AFTime backfillEndTime;
             AFTimeRange backfillPeriod = new AFTimeRange();
 
+            AFAnalysisService.CalculationMode mode = AFAnalysisService.CalculationMode.FillDataGaps;
             String reason = null;
             Object response = null;
 
-            String help_message = "This utility backfills an analysis.  Generic syntax: "
-                            + "\n\tUpdateFileAttribute.exe \\\\AFServer\\AFDatabase\\AFElementPath AnalysisNameFilter StartTime EndTime Mode"
-                            + "\n This utility supports two modes: backfill and recalc.  Examples:"
-                            + "\n\tUpdateFileAttribute.exe \\\\AF1\\TestDB\\Plant1\\Pump1 FlowRate_DailyAvg '*-10d' '*' recalculate"
-                            + "\n\tUpdateFileAttribute.exe \\\\AF1\\TestDB\\Plant1\\Pump1 FlowRate_DailyAvg '*-10d' '*' backfill";
+            String help_message = "This utility backfills/recalculates analyses.  Generic syntax: "
+                            + "\n\tUpdateFileAttribute.exe \\\\AFServer\\AFDatabase\\pathToElement\\AFElement AnalysisNameFilter StartTime EndTime Mode"
+                            + "\n This utility supports two modes: backfill and recalc.  Backfill will fill in data gaps only.  Recalc will replace all values.  Examples:"
+                            + "\n\tUpdateFileAttribute.exe \\\\AF1\\TestDB\\Plant1\\Pump1 FlowRate_*Avg '*-10d' '*' recalc"
+                            + "\n\tUpdateFileAttribute.exe \\\\AF1\\TestDB\\Plant1\\Pump1 *Rollup '*-10d' '*' backfill";
             
             //bad input handling & help
             if (args.Length < 5 || args.Contains("?"))
@@ -73,41 +65,47 @@ namespace AnalysisBackfill
                 AFSystemHelper.Connect(user_serv, user_db);
                 aSystem = aSystems[user_serv];
                 aDatabase = aSystem.Databases[user_db];
+                aAnalysisService = aSystem.AnalysisService;
+
 
                 /*
+                 * need to rewrite this bit.  there has to be a better way to comparsion the version to "2.8.5" than parsing the string
                 //check versions
                 var PISystemVersion = aSystem.ServerVersion.Split('.');
                 var AFSDKVersion = aSystems.Version.Split('.');
-                if (!PISystemVersion.Contains("2.8.5"))
+                                
+                //if less than version 2.8.5, then programmatic backfill/recalc is not supported.
+                if (Convert.ToInt32(PISystemVersion[0])<3 && Convert.ToInt32(PISystemVersion[1]) < 8 && Convert.ToInt32(PISystemVersion[2]) < 6)
                 {
-                    Console.WriteLine("Programmatic backfilling/recalculation not supported in PI AF Server {0}." +
-                        "Please upgrade PI AF Server '{1}' to version 2.8.5 or higher.", PISystemVersion, user_serv);
+                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in PI AF Server {0}." +
+                        "Please upgrade PI AF Server '{1}' to version 2.8.5 or higher to use this utility.", aSystem.ServerVersion, user_serv);
                     Environment.Exit(0);
                 }
                 if (!(AFSDKVersion.Contains("2.8.5") || AFSDKVersion.Contains("2.8.6")))
                 {
-                    Console.WriteLine("Programmatic backfilling/recalculation not supported in AF SDK Version {0}." +
-                    "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher.", AFSDKVersion, user_serv);
+                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in AF SDK Version {0}." +
+                    "Please upgrade PI System Explorer on this machine to version 2.8.6 or higher to use this utility.", AFSDKVersion, user_serv);
                     Environment.Exit(0);
                 }
                 if (!aAnalysisService.CanQueueCalculation(out reason))
                 { 
                     Console.WriteLine(reason);
+                    Console.WriteLine("Programmatic backfilling/recalculation is not supported in AF SDK Version {0}." +
+                        "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher to use this utility.", AFSDKVersion, user_serv);
+                    Environment.Exit(0);
+                }
+                if (!aPIServer.ServerVersion.Contains(3.4.405))
+                {
                     Console.WriteLine("Programmatic backfilling/recalculation not supported in AF SDK Version {0}." +
                         "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher.", AFSDKVersion, user_serv);
                     Environment.Exit(0);
                 }
-                if (!aPIServer.ServerVersion.Contains(3.4.405))
-                { 
-                    onsole.WriteLine("Programmatic backfilling/recalculation not supported in AF SDK Version {0}." +
-                        "Please upgrade PI System Explorer on this machine to version 2.8.5 or higher.", AFSDKVersion, user_serv);
-                    Environment.Exit(0);
-                }
                 */
+
                 //AFElement
                 var preLength = user_serv.Length + user_db.Length;
                 var path1 = user_path.Substring(preLength + 3, user_path.Length - preLength - 3);
-                aElement = (AFElement)AFObject.FindObject(path1, aDatabase);
+                foundElements = (AFElement)AFObject.FindObject(path1, aDatabase);
 
                 //other inputs
                 user_analysisfilter = args[1];
@@ -116,39 +114,59 @@ namespace AnalysisBackfill
                 backfillStartTime = new AFTime(start);
                 backfillEndTime = new AFTime(end);
                 backfillPeriod = new AFTimeRange(backfillStartTime, backfillEndTime);
+
+                //user_mode
                 user_mode = args[4];
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("Error with inputs. " + ex.Message);
-                Environment.Exit(0);
-            }
-            try
-            {
+                switch (user_mode.ToLower())
+                {
+                    case "recalc":
+                        mode = AFAnalysisService.CalculationMode.DeleteExistingData;
+                        break;
+                    case "backfill":
+                        mode = AFAnalysisService.CalculationMode.FillDataGaps;
+                        break;
+                    default:
+                        Console.WriteLine("Invalid mode specified.  Supported modes: backfill, recalc");
+                        Environment.Exit(0);
+                        break;
+                }
+            
                 //find analyses
-                String analysisfilter = "Target:=" + aElement.GetPath(aDatabase) + " Name:=" + user_analysisfilter;
+                String analysisfilter = "Target:=" + foundElements.GetPath(aDatabase) + " Name:=" + user_analysisfilter;
                 AFAnalysisSearch analysisSearch = new AFAnalysisSearch(aDatabase, "analysisSearch", AFAnalysisSearch.ParseQuery(analysisfilter));
                 foundAnalyses = analysisSearch.FindAnalyses(0, true).ToList();
 
                 //print details to user
-                Console.WriteLine("Request information:"
-                    + "\n\tElement: " + aElement.GetPath().ToString()
-                    + "\n\tTime range: " + backfillPeriod.ToString()
-                    + "\n\tMode: " + user_mode
+                Console.WriteLine("Requested backfills/recalculations:"
+                    + "\n\tElement: " + foundElements.GetPath().ToString()
                     + "\n\tAnalyses (" + foundAnalyses.Count() + "):"); 
                 foreach (var analysis_n in foundAnalyses)
                 {
-                    Console.WriteLine("\t\t{0}", analysis_n.Name);
+                    Console.WriteLine("\t\t{0}\t{1}\tOutputs:{2}", analysis_n.Name, analysis_n.AnalysisRule.Name,analysis_n.AnalysisRule.GetOutputs().Count);
                 }
 
-                Console.WriteLine("\n\nProgram will continue after 10 seconds, or after pressing any key.  Press Ctrl+C to kill the program.");
-                DateTime beginWait = DateTime.Now;
-                while (!Console.KeyAvailable && DateTime.Now.Subtract(beginWait).TotalSeconds < 10)
-                    Thread.Sleep(250);
+                Console.WriteLine("\tTime range: " + backfillPeriod.ToString() + ", " + "{0}d {1}h {2}m {3}s."
+                    , backfillPeriod.Span.Days, backfillPeriod.Span.Hours, backfillPeriod.Span.Minutes, backfillPeriod.Span.Seconds);
+                Console.WriteLine("\tMode: " + user_mode + "=" + mode.ToString());
 
+                if (foundAnalyses.Count == 0)
+                {
+                    Console.WriteLine("\nNo analyses on AF Element '{0}' match this analysis filter: '{1}'.  Exiting.", user_path, user_analysisfilter);
+                    Environment.Exit(0);
+                }
+                
+                //implement wait time
+                Console.WriteLine("\nAnalyses will be queued for processing in 10 seconds.  Press Ctrl+C to cancel.");
+                DateTime beginWait = DateTime.Now;
+                while (!Console.KeyAvailable && DateTime.Now.Subtract(beginWait).TotalSeconds < 10) Thread.Sleep(250);
+
+                //no status check
+                Console.WriteLine("\nThere will be no status check after the backfill/recalculate is queued (until AF 2.9.0). Please verify using other means.");
+
+                //queue analyses
                 foreach (var analysis_n in foundAnalyses)
                 {
-                    response = aAnalysisService.QueueCalculation(new List<AFAnalysis> { analysis_n }, backfillPeriod, AFAnalysisService.CalculationMode.FillDataGaps);
+                    response = aAnalysisService.QueueCalculation(new List<AFAnalysis> { analysis_n }, backfillPeriod, mode);
 
                     /*
                         * in AF 2.9, QueueCalculation will allow for true status checking. In AF 2.8.5, it is not possible to check.  
