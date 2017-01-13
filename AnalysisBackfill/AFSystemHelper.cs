@@ -26,6 +26,7 @@ class AFSystemHelper
             {
                 Console.WriteLine("\t" + it.Name);
             }
+            Environment.Exit(0);
             return;
         }
 
