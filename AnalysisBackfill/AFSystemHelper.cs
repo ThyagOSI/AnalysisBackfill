@@ -1,10 +1,6 @@
 ﻿using OSIsoft.AF;
 using OSIsoft.AF.PI;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 /*
  *  Copyright (C) 2017  Keith Fong
