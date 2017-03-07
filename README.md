@@ -1,9 +1,10 @@
 # AnalysisBackfill
-Programmatically backfill and recalculate AF Analyses
+Programmatically backfill and recalculate AF Analyses for the OSIsoft PI System.  Supported only for PI AF 2.8.5+, PI Analysis Service 2.8.5+, and PI Data Archive 3.4.405+
 
-This utility backfills/recalculates analyses.  Generic syntax:
-	UpdateFileAttribute.exe \\\\AFServer\AFDatabase\pathToElement\AFElement AnalysisNameFilter StartTime EndTime Mode
+This utility allows the user to backfill/recalculate analyses from the command line.  It allows the user to specify the element, a filter for the analysis name, the time range, and the mode.  This utility supports two modes: backfill and recalc.  Backfill will fill in data gaps only.  Recalc will delete all values in the time range and then calculate results.  
 
-This utility supports two modes: backfill and recalc.  Backfill will fill in data gaps only.  Recalc will replace all values.  Examples:
-	UpdateFileAttribute.exe \\\\AF1\TestDB\Plant1\Pump1 FlowRate_\*Avg '\*-10d' '\*' recalc
-	UpdateFileAttribute.exe \\\\AF1\TestDB\Plant1\Pump1 \*Rollup '\*-10d' '\*' backfill
+Examples syntax:
+	AnalysisBackfill.exe \\\\AF1\TestDB\Plant1\Pump1 FlowRate_\*Avg '\*-10d' '\*' recalc
+	AnalysisBackfill.exe \\\\AF1\TestDB\Plant1 \*Rollup '\*-10d' '\*' backfill
+
+Updated 2017.03.07
